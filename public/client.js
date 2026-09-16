@@ -212,6 +212,11 @@ function createPeerConnection(peerId, name, isInitiator, peerCamOn, peerMicOn) {
     addVideoTile(peerId, name, e.streams[0], false, peerCamOn, peerMicOn);
   };
 
+  pc.oniceconnectionstatechange = () => {
+    console.log(`[ICE ${peerId}]`, pc.iceConnectionState);
+    setConnectionStatus(peerId, pc.iceConnectionState);
+  };
+
   if (isInitiator) {
     pc.onnegotiationneeded = async () => {
       const offer = await pc.createOffer();
@@ -221,6 +226,23 @@ function createPeerConnection(peerId, name, isInitiator, peerCamOn, peerMicOn) {
   }
 
   return pc;
+}
+
+// Mostra o estado da conexão ICE no rótulo do tile — ajuda a diagnosticar
+// se o problema é de rede (conexão nunca fecha) ou de outra coisa
+// (conexão "connected" mas sem áudio/vídeo aparecendo).
+function setConnectionStatus(peerId, state) {
+  const tile = document.getElementById('tile-' + peerId);
+  if (!tile) return;
+  const labelEl = tile.querySelector('.label');
+  if (!labelEl) return;
+  const baseName = labelEl.dataset.baseName || labelEl.textContent;
+  labelEl.dataset.baseName = baseName;
+  if (state === 'connected' || state === 'completed') {
+    labelEl.textContent = baseName;
+  } else {
+    labelEl.textContent = `${baseName} (${state})`;
+  }
 }
 
 // --- Vídeo UI ---
@@ -249,20 +271,38 @@ function addVideoTile(id, label, stream, isLocal, tileCamOn, tileMicOn) {
     labelEl.className = 'label';
     labelEl.textContent = label;
 
+    // Se o navegador bloquear o autoplay com som, esse botão aparece
+    // por cima do tile; um clique é um "gesto do usuário" e sempre
+    // libera a reprodução, mesmo em navegadores mais restritivos (Safari/iOS).
+    const unlockBtn = document.createElement('button');
+    unlockBtn.type = 'button';
+    unlockBtn.className = 'unlock-audio-btn hidden';
+    unlockBtn.textContent = '🔊 Toque para ativar áudio/vídeo';
+    unlockBtn.addEventListener('click', () => {
+      video.play().then(() => {
+        unlockBtn.classList.add('hidden');
+      }).catch(() => {});
+    });
+
     tile.appendChild(video);
     tile.appendChild(avatar);
     tile.appendChild(micIcon);
     tile.appendChild(labelEl);
+    tile.appendChild(unlockBtn);
     videosGrid.appendChild(tile);
   }
   tile.classList.toggle('cam-off', !tileCamOn);
   tile.classList.toggle('mic-off', tileMicOn === false);
   const video = tile.querySelector('video');
+  const unlockBtn = tile.querySelector('.unlock-audio-btn');
   video.srcObject = stream;
   // Alguns navegadores não autoplayam áudio de elementos criados
   // dinamicamente sem essa chamada explícita — sem isso, o vídeo
-  // aparece mas o som do outro lado não é ouvido.
-  video.play().catch(() => {});
+  // aparece mas o som do outro lado não é ouvido. Se for bloqueado,
+  // mostramos o botão de desbloqueio manual em vez de falhar em silêncio.
+  video.play()
+    .then(() => unlockBtn.classList.add('hidden'))
+    .catch(() => unlockBtn.classList.remove('hidden'));
 }
 
 function removeVideoTile(id) {
