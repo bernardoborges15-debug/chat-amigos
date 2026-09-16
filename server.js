@@ -11,6 +11,29 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Gera credenciais TURN sob demanda usando a conta Metered.ca do usuário.
+// METERED_DOMAIN e METERED_API_KEY são configurados como variáveis de
+// ambiente no Render — nunca ficam no código. Sem elas configuradas,
+// devolve só STUN (funciona apenas quando os dois lados estão na mesma
+// rede ou com NAT simples).
+app.get('/api/turn-credentials', async (req, res) => {
+  const domain = process.env.METERED_DOMAIN;
+  const apiKey = process.env.METERED_API_KEY;
+
+  if (!domain || !apiKey) {
+    return res.json([{ urls: 'stun:stun.l.google.com:19302' }]);
+  }
+
+  try {
+    const response = await fetch(`https://${domain}/api/v1/turn/credentials?apiKey=${apiKey}`);
+    const iceServers = await response.json();
+    res.json(iceServers);
+  } catch (err) {
+    console.error('Erro ao buscar credenciais TURN:', err.message);
+    res.json([{ urls: 'stun:stun.l.google.com:19302' }]);
+  }
+});
+
 // roomId -> Set de socketIds
 const rooms = new Map();
 

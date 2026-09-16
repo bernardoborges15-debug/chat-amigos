@@ -1,16 +1,23 @@
 const socket = io();
 
-const iceServers = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  // TURN gratuito (Open Relay Project) — necessário quando os dois lados
-  // estão em redes diferentes e a conexão P2P direta não é possível
-  // (ex: NAT restritivo, CGNAT de operadora). Sem isso, o áudio/vídeo
-  // simplesmente não chega, mesmo a sinalização funcionando normalmente.
-  { urls: 'stun:stun.relay.metered.ca:80' },
-  { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:global.relay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-];
+// Buscamos as credenciais TURN do nosso próprio servidor (que por sua vez
+// consulta a conta Metered.ca configurada nas variáveis de ambiente do
+// Render). Sem um TURN funcionando, conexões entre redes diferentes
+// (ex: NAT restritivo, CGNAT de operadora) ficam travadas em "checking"
+// para sempre — a sinalização funciona, mas o áudio/vídeo nunca chega.
+let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+async function loadIceServers() {
+  try {
+    const res = await fetch('/api/turn-credentials');
+    const servers = await res.json();
+    if (Array.isArray(servers) && servers.length > 0) {
+      iceServers = servers;
+    }
+  } catch (err) {
+    console.warn('Não foi possível buscar credenciais TURN, usando STUN apenas.', err);
+  }
+}
 
 let localStream = null;
 let rawCameraStream = null; // stream original da webcam, antes da correção de espelhamento
@@ -79,6 +86,8 @@ document.getElementById('join-btn').addEventListener('click', joinRoom);
 async function joinRoom() {
   myName = document.getElementById('name-input').value.trim() || 'Anônimo';
   roomId = document.getElementById('room-input').value.trim() || 'sala-padrao';
+
+  await loadIceServers();
 
   try {
     rawCameraStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
