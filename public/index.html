@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat Amigos</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="join-screen" class="screen">
+  <div class="join-box">
+    <h1>Chat Amigos</h1>
+    <input id="name-input" type="text" placeholder="Seu nome" maxlength="20">
+    <input id="room-input" type="text" placeholder="Nome da sala" maxlength="30">
+    <button id="join-btn">Entrar</button>
+  </div>
+</div>
+
+<div id="call-screen" class="screen hidden">
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span id="room-name-label">Chat Amigos</span>
+    </div>
+
+    <div class="channel-section">
+      <div class="section-label">Canais de Texto</div>
+      <div id="channel-text" class="channel-item active"><span class="hash">#</span> geral</div>
+    </div>
+
+    <div class="channel-section">
+      <div class="section-label">Canais de Voz</div>
+      <div id="channel-voice" class="channel-item"><span class="hash">🔊</span> Sala de voz</div>
+      <div id="voice-members" class="voice-members"></div>
+    </div>
+
+    <div class="user-bar">
+      <div class="user-info">
+        <div id="user-avatar" class="user-avatar">?</div>
+        <div class="user-meta">
+          <div id="user-name-label" class="user-name">—</div>
+          <div class="user-status">Conectado</div>
+        </div>
+      </div>
+      <div class="user-controls">
+        <button id="mic-btn" title="Ligar/desligar microfone">🎤</button>
+        <button id="cam-btn" title="Ligar/desligar câmera">📷</button>
+        <button id="screen-btn" title="Compartilhar tela">🖥️</button>
+        <button id="leave-btn" title="Sair da chamada">📞</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div id="main-header" class="main-header">
+      <span id="header-title"><span class="hash">#</span> geral</span>
+      <button id="chat-toggle-btn" class="icon-btn hidden" title="Mostrar/ocultar chat">💬</button>
+    </div>
+
+    <div class="content-row">
+      <div id="videos-grid" class="videos-grid hidden"></div>
+
+      <div id="chat-panel" class="chat-panel mode-full">
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <div id="emoji-panel" class="emoji-panel hidden"></div>
+
+        <form id="chat-form" class="chat-form">
+          <button type="button" id="emoji-btn" title="Emojis">😀</button>
+          <input id="chat-input" type="text" placeholder="Conversar em #geral" autocomplete="off">
+          <button type="button" id="audio-btn" title="Gravar áudio">🎙️</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</body>
+</html>

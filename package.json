@@ -1,0 +1,13 @@
+{
+  "name": "chat-amigos",
+  "version": "1.0.0",
+  "description": "App leve de video, audio, tela e chat para um grupo de amigos (WebRTC + Socket.io)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
