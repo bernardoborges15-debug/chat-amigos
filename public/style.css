@@ -296,6 +296,37 @@ body {
   border-radius: 4px;
   font-size: 12px;
 }
+.video-tile .fullscreen-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.55);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 6;
+}
+.video-tile:hover .fullscreen-btn { opacity: 1; }
+.video-tile .fullscreen-btn:hover { background: rgba(0,0,0,0.8); }
+
+/* Em tela cheia, mostra a imagem inteira (sem cortar) e centralizada */
+.video-tile:fullscreen {
+  aspect-ratio: auto;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+}
+.video-tile:fullscreen video {
+  object-fit: contain;
+}
+.video-tile:fullscreen .fullscreen-btn { opacity: 1; }
+
 .video-tile.mic-off {
   outline: 3px solid var(--danger);
   outline-offset: -3px;
@@ -480,4 +511,7 @@ body {
 
   .chat-form { margin: 0 8px 8px; }
   .emoji-panel { grid-template-columns: repeat(6, 1fr); padding: 8px; }
+
+  /* Sem hover em toque — o botão de tela cheia fica sempre visível */
+  .video-tile .fullscreen-btn { opacity: 1; }
 }

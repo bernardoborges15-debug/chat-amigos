@@ -316,11 +316,26 @@ function addVideoTile(id, label, stream, isLocal, tileCamOn, tileMicOn) {
       }).catch(() => {});
     });
 
+    const fullscreenBtn = document.createElement('button');
+    fullscreenBtn.type = 'button';
+    fullscreenBtn.className = 'fullscreen-btn';
+    fullscreenBtn.title = 'Tela cheia';
+    fullscreenBtn.textContent = '⛶';
+    fullscreenBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (document.fullscreenElement === tile) {
+        document.exitFullscreen();
+      } else {
+        tile.requestFullscreen();
+      }
+    });
+
     tile.appendChild(video);
     tile.appendChild(avatar);
     tile.appendChild(micIcon);
     tile.appendChild(labelEl);
     tile.appendChild(unlockBtn);
+    tile.appendChild(fullscreenBtn);
     videosGrid.appendChild(tile);
   }
   tile.classList.toggle('cam-off', !tileCamOn);
