@@ -82,6 +82,12 @@ function showView(view) {
 }
 
 document.getElementById('join-btn').addEventListener('click', joinRoom);
+document.getElementById('name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinRoom();
+});
+document.getElementById('room-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinRoom();
+});
 
 async function joinRoom() {
   myName = document.getElementById('name-input').value.trim() || 'Anônimo';
@@ -155,19 +161,34 @@ function unmirrorVideo(rawStream) {
 
 // --- Sinalização ---
 
+// Guardamos o estado de câmera/microfone de cada peer separadamente do
+// tile de vídeo. Isso evita uma corrida: se o peer ligar a câmera antes
+// do nosso pc.ontrack criar o tile dele, o evento media-state não teria
+// nada pra atualizar e o estado ficaria perdido. Lendo sempre desse mapa
+// (em vez de um valor "congelado" na criação da conexão), o tile nasce
+// já com o estado correto, não importa a ordem de chegada dos eventos.
+const peerState = new Map(); // peerId -> { camOn, micOn }
+
 socket.on('existing-peers', (existingPeers) => {
   existingPeers.forEach(({ peerId, name, camOn, micOn }) => {
-    createPeerConnection(peerId, name, true, camOn, micOn);
+    peerState.set(peerId, { camOn: !!camOn, micOn: micOn !== false });
+    createPeerConnection(peerId, name, true);
     addVoiceMember(peerId, name);
   });
 });
 
 socket.on('peer-joined', ({ peerId, name, camOn, micOn }) => {
-  createPeerConnection(peerId, name, false, camOn, micOn);
+  peerState.set(peerId, { camOn: !!camOn, micOn: micOn !== false });
+  createPeerConnection(peerId, name, false);
   addVoiceMember(peerId, name);
 });
 
 socket.on('media-state', ({ peerId, camOn, micOn }) => {
+  const current = peerState.get(peerId) || { camOn: false, micOn: true };
+  if (camOn !== undefined) current.camOn = camOn;
+  if (micOn !== undefined) current.micOn = micOn;
+  peerState.set(peerId, current);
+
   const tile = document.getElementById('tile-' + peerId);
   if (!tile) return;
   if (camOn !== undefined) tile.classList.toggle('cam-off', !camOn);
@@ -203,9 +224,10 @@ socket.on('peer-left', ({ peerId }) => {
   }
   removeVideoTile(peerId);
   removeVoiceMember(peerId);
+  peerState.delete(peerId);
 });
 
-function createPeerConnection(peerId, name, isInitiator, peerCamOn, peerMicOn) {
+function createPeerConnection(peerId, name, isInitiator) {
   const pc = new RTCPeerConnection({ iceServers });
   peers.set(peerId, { pc, name });
 
@@ -218,7 +240,8 @@ function createPeerConnection(peerId, name, isInitiator, peerCamOn, peerMicOn) {
   };
 
   pc.ontrack = (e) => {
-    addVideoTile(peerId, name, e.streams[0], false, peerCamOn, peerMicOn);
+    const state = peerState.get(peerId) || { camOn: false, micOn: true };
+    addVideoTile(peerId, name, e.streams[0], false, state.camOn, state.micOn);
   };
 
   pc.oniceconnectionstatechange = () => {
