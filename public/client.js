@@ -2,14 +2,21 @@ const socket = io();
 
 const iceServers = [
   { urls: 'stun:stun.l.google.com:19302' },
-  // Adicione um TURN aqui quando for testar fora da rede local:
-  // { urls: 'turn:SEU_TURN:3478', username: 'user', credential: 'pass' },
+  // TURN gratuito (Open Relay Project) — necessário quando os dois lados
+  // estão em redes diferentes e a conexão P2P direta não é possível
+  // (ex: NAT restritivo, CGNAT de operadora). Sem isso, o áudio/vídeo
+  // simplesmente não chega, mesmo a sinalização funcionando normalmente.
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:global.relay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
 ];
 
 let localStream = null;
 let rawCameraStream = null; // stream original da webcam, antes da correção de espelhamento
 let cameraTrack = null; // guardamos para poder voltar da tela pra câmera
 let camOn = false; // câmera começa desligada por padrão
+let micOn = true; // microfone começa ligado por padrão
 const peers = new Map(); // peerId -> { pc, name }
 let myName = '';
 let roomId = '';
@@ -89,7 +96,7 @@ async function joinRoom() {
   // Câmera começa desligada; o usuário liga quando quiser.
   cameraTrack.enabled = false;
 
-  addVideoTile('local', myName + ' (você)', localStream, true, false);
+  addVideoTile('local', myName + ' (você)', localStream, true, false, true);
   addVoiceMember('local', myName);
   camBtn.classList.add('active');
 
@@ -100,7 +107,7 @@ async function joinRoom() {
   joinScreen.classList.add('hidden');
   callScreen.classList.remove('hidden');
 
-  socket.emit('join-room', { roomId, name: myName, camOn: false });
+  socket.emit('join-room', { roomId, name: myName, camOn: false, micOn: true });
 }
 
 // Recebe o stream bruto da webcam e devolve um novo stream com o vídeo
@@ -140,20 +147,22 @@ function unmirrorVideo(rawStream) {
 // --- Sinalização ---
 
 socket.on('existing-peers', (existingPeers) => {
-  existingPeers.forEach(({ peerId, name, camOn }) => {
-    createPeerConnection(peerId, name, true, camOn);
+  existingPeers.forEach(({ peerId, name, camOn, micOn }) => {
+    createPeerConnection(peerId, name, true, camOn, micOn);
     addVoiceMember(peerId, name);
   });
 });
 
-socket.on('peer-joined', ({ peerId, name, camOn }) => {
-  createPeerConnection(peerId, name, false, camOn);
+socket.on('peer-joined', ({ peerId, name, camOn, micOn }) => {
+  createPeerConnection(peerId, name, false, camOn, micOn);
   addVoiceMember(peerId, name);
 });
 
-socket.on('media-state', ({ peerId, camOn }) => {
+socket.on('media-state', ({ peerId, camOn, micOn }) => {
   const tile = document.getElementById('tile-' + peerId);
-  if (tile) tile.classList.toggle('cam-off', !camOn);
+  if (!tile) return;
+  if (camOn !== undefined) tile.classList.toggle('cam-off', !camOn);
+  if (micOn !== undefined) tile.classList.toggle('mic-off', !micOn);
 });
 
 socket.on('signal', async ({ from, data }) => {
@@ -187,7 +196,7 @@ socket.on('peer-left', ({ peerId }) => {
   removeVoiceMember(peerId);
 });
 
-function createPeerConnection(peerId, name, isInitiator, peerCamOn) {
+function createPeerConnection(peerId, name, isInitiator, peerCamOn, peerMicOn) {
   const pc = new RTCPeerConnection({ iceServers });
   peers.set(peerId, { pc, name });
 
@@ -200,7 +209,7 @@ function createPeerConnection(peerId, name, isInitiator, peerCamOn) {
   };
 
   pc.ontrack = (e) => {
-    addVideoTile(peerId, name, e.streams[0], false, peerCamOn);
+    addVideoTile(peerId, name, e.streams[0], false, peerCamOn, peerMicOn);
   };
 
   if (isInitiator) {
@@ -216,7 +225,7 @@ function createPeerConnection(peerId, name, isInitiator, peerCamOn) {
 
 // --- Vídeo UI ---
 
-function addVideoTile(id, label, stream, isLocal, tileCamOn) {
+function addVideoTile(id, label, stream, isLocal, tileCamOn, tileMicOn) {
   let tile = document.getElementById('tile-' + id);
   if (!tile) {
     tile = document.createElement('div');
@@ -232,18 +241,28 @@ function addVideoTile(id, label, stream, isLocal, tileCamOn) {
     avatar.className = 'avatar-placeholder';
     avatar.textContent = label[0].toUpperCase();
 
+    const micIcon = document.createElement('div');
+    micIcon.className = 'mic-off-icon';
+    micIcon.textContent = '🔇';
+
     const labelEl = document.createElement('div');
     labelEl.className = 'label';
     labelEl.textContent = label;
 
     tile.appendChild(video);
     tile.appendChild(avatar);
+    tile.appendChild(micIcon);
     tile.appendChild(labelEl);
     videosGrid.appendChild(tile);
   }
   tile.classList.toggle('cam-off', !tileCamOn);
+  tile.classList.toggle('mic-off', tileMicOn === false);
   const video = tile.querySelector('video');
   video.srcObject = stream;
+  // Alguns navegadores não autoplayam áudio de elementos criados
+  // dinamicamente sem essa chamada explícita — sem isso, o vídeo
+  // aparece mas o som do outro lado não é ouvido.
+  video.play().catch(() => {});
 }
 
 function removeVideoTile(id) {
@@ -394,9 +413,14 @@ function sendAudioMessage(blob) {
 // --- Controles: mic, câmera, tela ---
 
 micBtn.addEventListener('click', () => {
-  const track = localStream.getAudioTracks()[0];
-  track.enabled = !track.enabled;
-  micBtn.classList.toggle('active', !track.enabled);
+  micOn = !micOn;
+  localStream.getAudioTracks()[0].enabled = micOn;
+  micBtn.classList.toggle('active', !micOn);
+
+  const localTile = document.getElementById('tile-local');
+  if (localTile) localTile.classList.toggle('mic-off', !micOn);
+
+  socket.emit('media-state', { micOn });
 });
 
 camBtn.addEventListener('click', () => {

@@ -18,7 +18,7 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let currentName = null;
 
-  socket.on('join-room', ({ roomId, name, camOn }) => {
+  socket.on('join-room', ({ roomId, name, camOn, micOn }) => {
     currentRoom = roomId;
     currentName = name || 'Anônimo';
     socket.join(roomId);
@@ -26,17 +26,19 @@ io.on('connection', (socket) => {
     if (!rooms.has(roomId)) rooms.set(roomId, new Map());
     const peers = rooms.get(roomId);
 
+    const state = { name: currentName, camOn: !!camOn, micOn: micOn !== false };
+
     // Avisa aos peers já presentes que alguém novo chegou
     peers.forEach((peer, peerId) => {
-      io.to(peerId).emit('peer-joined', { peerId: socket.id, name: currentName, camOn: !!camOn });
+      io.to(peerId).emit('peer-joined', { peerId: socket.id, ...state });
     });
 
-    peers.set(socket.id, { name: currentName, camOn: !!camOn });
+    peers.set(socket.id, state);
 
     // Manda ao novo peer a lista de quem já está na sala
     const existingPeers = Array.from(peers.entries())
       .filter(([id]) => id !== socket.id)
-      .map(([id, peer]) => ({ peerId: id, name: peer.name, camOn: peer.camOn }));
+      .map(([id, peer]) => ({ peerId: id, ...peer }));
     socket.emit('existing-peers', existingPeers);
 
     io.to(roomId).emit('chat-message', { system: true, message: `${currentName} entrou na sala.` });
@@ -46,11 +48,15 @@ io.on('connection', (socket) => {
     io.to(to).emit('signal', { from: socket.id, data });
   });
 
-  socket.on('media-state', ({ camOn }) => {
+  socket.on('media-state', ({ camOn, micOn }) => {
     if (!currentRoom) return;
     const peers = rooms.get(currentRoom);
-    if (peers && peers.has(socket.id)) peers.get(socket.id).camOn = camOn;
-    io.to(currentRoom).emit('media-state', { peerId: socket.id, camOn });
+    if (peers && peers.has(socket.id)) {
+      const peer = peers.get(socket.id);
+      if (camOn !== undefined) peer.camOn = camOn;
+      if (micOn !== undefined) peer.micOn = micOn;
+    }
+    io.to(currentRoom).emit('media-state', { peerId: socket.id, camOn, micOn });
   });
 
   socket.on('chat-message', ({ message, audio, mime }) => {

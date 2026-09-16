@@ -23,10 +23,11 @@ body {
   background: var(--bg-primary);
   color: var(--text-normal);
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
-.screen { height: 100vh; }
+.screen { height: 100vh; height: 100dvh; }
 .hidden { display: none !important; }
 
 /* Tela de entrada */
@@ -295,6 +296,25 @@ body {
   border-radius: 4px;
   font-size: 12px;
 }
+.video-tile.mic-off {
+  outline: 3px solid var(--danger);
+  outline-offset: -3px;
+}
+.video-tile .mic-off-icon {
+  display: none;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--danger);
+  color: white;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.video-tile.mic-off .mic-off-icon { display: flex; }
 
 .chat-panel {
   display: flex;
@@ -415,8 +435,35 @@ body {
 }
 
 @media (max-width: 700px) {
-  .sidebar { width: 72px; }
+  .sidebar { width: 64px; }
   .sidebar-header, .section-label, .channel-item span:not(.hash),
   .user-meta, .voice-member span:not(.mini-avatar) { display: none; }
-  .channel-item, .voice-members { padding-left: 4px; }
+  .channel-item, .voice-members { padding-left: 4px; justify-content: center; }
+  .channel-item { justify-content: center; }
+  .voice-member { justify-content: center; }
+
+  .user-bar { padding: 6px 4px; flex-direction: column; gap: 6px; }
+  .user-info { display: none; }
+  .user-controls { flex-wrap: wrap; justify-content: center; }
+  .user-controls button { width: 30px; height: 30px; font-size: 14px; }
+
+  .join-box { width: 90%; max-width: 320px; padding: 24px 20px; }
+
+  .main-header { height: 44px; padding: 0 10px; font-size: 14px; }
+
+  .videos-grid { padding: 8px; gap: 8px; }
+  .video-tile { flex: 1 1 140px; max-width: 100%; min-width: 120px; }
+
+  .chat-panel.mode-sidebar {
+    position: fixed;
+    top: 44px;
+    left: 64px;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    z-index: 20;
+  }
+
+  .chat-form { margin: 0 8px 8px; }
+  .emoji-panel { grid-template-columns: repeat(6, 1fr); padding: 8px; }
 }
