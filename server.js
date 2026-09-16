@@ -17,19 +17,22 @@ app.use(express.static(path.join(__dirname, 'public')));
 // devolve só STUN (funciona apenas quando os dois lados estão na mesma
 // rede ou com NAT simples).
 app.get('/api/turn-credentials', async (req, res) => {
-  const domain = process.env.METERED_DOMAIN;
-  const apiKey = process.env.METERED_API_KEY;
+  // .trim() protege contra espaço/quebra de linha extra que o painel do
+  // Render às vezes deixa ao colar um valor de variável de ambiente.
+  const domain = process.env.METERED_DOMAIN?.trim();
+  const apiKey = process.env.METERED_API_KEY?.trim();
 
   if (!domain || !apiKey) {
     return res.json([{ urls: 'stun:stun.l.google.com:19302' }]);
   }
 
   try {
-    const response = await fetch(`https://${domain}/api/v1/turn/credentials?apiKey=${apiKey}`);
+    const url = `https://${domain}/api/v1/turn/credentials?apiKey=${apiKey}`;
+    const response = await fetch(url);
     const iceServers = await response.json();
     res.json(iceServers);
   } catch (err) {
-    console.error('Erro ao buscar credenciais TURN:', err.message);
+    console.error('Erro ao buscar credenciais TURN:', err.message, err.cause?.message || '');
     res.json([{ urls: 'stun:stun.l.google.com:19302' }]);
   }
 });
