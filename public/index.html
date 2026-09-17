@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Chat Amigos</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -19,7 +19,9 @@
 
 <div id="call-screen" class="screen hidden">
 
-  <aside class="sidebar">
+  <div id="sidebar-overlay"></div>
+
+  <aside id="sidebar" class="sidebar">
     <div class="sidebar-header">
       <span id="room-name-label">Chat Amigos</span>
     </div>
@@ -54,7 +56,10 @@
 
   <main class="main-content">
     <div id="main-header" class="main-header">
-      <span id="header-title"><span class="hash">#</span> geral</span>
+      <div class="header-left">
+        <button id="menu-btn" class="icon-btn" title="Menu">☰</button>
+        <span id="header-title"><span class="hash">#</span> geral</span>
+      </div>
       <button id="chat-toggle-btn" class="icon-btn hidden" title="Mostrar/ocultar chat">💬</button>
     </div>
 

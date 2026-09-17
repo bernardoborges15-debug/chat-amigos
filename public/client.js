@@ -47,9 +47,22 @@ const chatToggleBtn = document.getElementById('chat-toggle-btn');
 const chatPanel = document.getElementById('chat-panel');
 const channelText = document.getElementById('channel-text');
 const channelVoice = document.getElementById('channel-voice');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const menuBtn = document.getElementById('menu-btn');
 
 let currentView = 'text';
 let voiceChatOpen = false;
+
+// --- Gaveta lateral (celular) ---
+
+function setDrawer(open) {
+  sidebar.classList.toggle('open', open);
+  sidebarOverlay.classList.toggle('visible', open);
+}
+
+menuBtn.addEventListener('click', () => setDrawer(!sidebar.classList.contains('open')));
+sidebarOverlay.addEventListener('click', () => setDrawer(false));
 
 channelText.addEventListener('click', () => showView('text'));
 channelVoice.addEventListener('click', () => showView('voice'));
@@ -57,6 +70,7 @@ chatToggleBtn.addEventListener('click', () => {
   voiceChatOpen = !voiceChatOpen;
   chatPanel.classList.toggle('collapsed', !voiceChatOpen);
   chatToggleBtn.classList.toggle('active', voiceChatOpen);
+  callScreen.classList.toggle('chat-open', voiceChatOpen);
 });
 
 function showView(view) {
@@ -67,16 +81,19 @@ function showView(view) {
   chatToggleBtn.classList.toggle('hidden', !isVoice);
   channelText.classList.toggle('active', !isVoice);
   channelVoice.classList.toggle('active', isVoice);
+  setDrawer(false); // escolher um canal fecha a gaveta no celular
 
   if (isVoice) {
     chatPanel.classList.remove('mode-full');
     chatPanel.classList.add('mode-sidebar');
     chatPanel.classList.toggle('collapsed', !voiceChatOpen);
     chatToggleBtn.classList.toggle('active', voiceChatOpen);
+    callScreen.classList.toggle('chat-open', voiceChatOpen);
     headerTitle.innerHTML = `<span class="hash">🔊</span> Sala de voz`;
   } else {
     chatPanel.classList.add('mode-full');
     chatPanel.classList.remove('mode-sidebar', 'collapsed');
+    callScreen.classList.remove('chat-open');
     headerTitle.innerHTML = `<span class="hash">#</span> geral`;
   }
 }

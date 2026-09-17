@@ -227,6 +227,12 @@ body {
   box-shadow: 0 1px 0 rgba(0,0,0,0.2);
 }
 .main-header .hash { color: var(--text-muted); }
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .icon-btn {
   background: none;
   border: none;
@@ -238,6 +244,10 @@ body {
 }
 .icon-btn:hover { background: var(--bg-hover); color: var(--text-normal); }
 .icon-btn.active { color: var(--text-header); }
+
+/* Menu hambúrguer e fundo escurecido só existem no celular */
+#menu-btn { display: none; }
+#sidebar-overlay { display: none; }
 
 .content-row {
   flex: 1;
@@ -479,39 +489,133 @@ body {
   50% { opacity: 0.4; }
 }
 
-@media (max-width: 700px) {
-  .sidebar { width: 64px; }
-  .sidebar-header, .section-label, .channel-item span:not(.hash),
-  .user-meta, .voice-member span:not(.mini-avatar) { display: none; }
-  .channel-item, .voice-members { padding-left: 4px; justify-content: center; }
-  .channel-item { justify-content: center; }
-  .voice-member { justify-content: center; }
+/* ===== Celular / tablet pequeno =====
+   A sidebar vira uma gaveta que desliza por cima (aberta pelo ☰) e os
+   controles da chamada viram uma barra flutuante embaixo, com botões
+   grandes o suficiente para o dedo — mesmo padrão do app do Discord. */
+@media (max-width: 820px) {
+  #menu-btn { display: block; font-size: 20px; }
 
-  .user-bar { padding: 6px 4px; flex-direction: column; gap: 6px; }
-  .user-info { display: none; }
-  .user-controls { flex-wrap: wrap; justify-content: center; }
-  .user-controls button { width: 30px; height: 30px; font-size: 14px; }
+  /* Usamos `left` em vez de `transform` de propósito: um elemento com
+     transform vira o bloco de referência dos filhos `position: fixed`,
+     e a barra de controles (que é filha da sidebar) sumiria junto com a
+     gaveta fechada. Com `left`, ela continua ancorada na viewport. */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    bottom: 0;
+    width: 82%;
+    max-width: 300px;
+    z-index: 50;
+    transition: left 0.22s ease;
+    padding-top: env(safe-area-inset-top);
+  }
+  .sidebar.open { left: 0; }
 
-  .join-box { width: 90%; max-width: 320px; padding: 24px 20px; }
+  #sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+  #sidebar-overlay.visible { opacity: 1; pointer-events: auto; }
 
-  .main-header { height: 44px; padding: 0 10px; font-size: 14px; }
+  /* Alvos de toque maiores na gaveta */
+  .channel-item { padding: 10px 8px; font-size: 16px; }
+  .voice-member { padding: 8px 4px; font-size: 15px; }
+  .sidebar-header { height: 56px; font-size: 17px; }
 
-  .videos-grid { padding: 8px; gap: 8px; }
-  .video-tile { flex: 1 1 140px; max-width: 100%; min-width: 120px; }
+  .main-header {
+    height: 52px;
+    padding: 0 8px 0 4px;
+    font-size: 15px;
+    padding-top: env(safe-area-inset-top);
+  }
+  .icon-btn { padding: 8px 10px; }
 
+  .join-box { width: 90%; max-width: 340px; padding: 28px 22px; }
+  .join-box input, .join-box button { padding: 14px; font-size: 16px; }
+
+  /* Vídeos: uma coluna larga (ou duas quando couber), com espaço para a dock */
+  .videos-grid {
+    padding: 10px 10px 88px;
+    gap: 10px;
+    align-content: start;
+  }
+  .video-tile {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .video-tile .fullscreen-btn {
+    opacity: 1;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  .video-tile .avatar-placeholder { font-size: 40px; }
+
+  /* Chat ocupa a tela inteira no celular, em vez de virar uma coluna
+     estreita — mas começa abaixo do cabeçalho, para o botão de fechar
+     continuar visível e clicável. */
   .chat-panel.mode-sidebar {
     position: fixed;
-    top: 44px;
-    left: 64px;
+    top: calc(52px + env(safe-area-inset-top));
+    left: 0;
     right: 0;
     bottom: 0;
     width: auto;
-    z-index: 20;
+    z-index: 30;
+    border-left: none;
   }
 
-  .chat-form { margin: 0 8px 8px; }
-  .emoji-panel { grid-template-columns: repeat(6, 1fr); padding: 8px; }
+  .chat-messages { padding: 12px 12px 8px; }
+  .chat-form {
+    margin: 0 8px calc(8px + env(safe-area-inset-bottom));
+    padding: 4px 6px;
+  }
+  /* No canal de texto a dock fica flutuando por cima — o campo de
+     mensagem precisa de espaço para não ficar escondido atrás dela. */
+  .chat-panel.mode-full .chat-form {
+    margin-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .chat-form input { padding: 13px 8px; font-size: 16px; }
+  .chat-form button { font-size: 22px; padding: 8px 10px; }
+  .emoji-panel { grid-template-columns: repeat(7, 1fr); padding: 10px; }
+  .emoji-panel button { font-size: 24px; padding: 8px 4px; }
 
-  /* Sem hover em toque — o botão de tela cheia fica sempre visível */
-  .video-tile .fullscreen-btn { opacity: 1; }
+  /* Controles da chamada viram uma barra flutuante ancorada embaixo,
+     sempre visível (mesmo com a gaveta fechada), com botões redondos
+     grandes o bastante para o dedo. */
+  .user-bar { padding: 10px 8px; }
+  .user-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    justify-content: center;
+    gap: 12px;
+    z-index: 60;
+  }
+  .user-controls button {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    color: var(--text-normal);
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  }
+  .user-controls button.active { background: var(--danger); color: white; }
+  #leave-btn { background: var(--danger); color: white; }
+
+  /* Some com a barra quando ela atrapalha: gaveta aberta ou chat em
+     tela cheia por cima. */
+  .sidebar.open .user-controls,
+  .chat-open .user-controls { display: none; }
 }
